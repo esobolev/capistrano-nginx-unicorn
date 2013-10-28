@@ -8,6 +8,7 @@ Capistrano::Configuration.instance.load do
   set_default(:templates_path, "config/deploy/templates")
 
   set_default(:nginx_server_name) { Capistrano::CLI.ui.ask "Nginx server name: " }
+  set_default(:nginx_config_path) { "/etc/nginx/sites-available/" }
   set_default(:nginx_use_ssl, false)
   set_default(:nginx_ssl_certificate) { "#{nginx_server_name}.crt" }
   set_default(:nginx_ssl_certificate_key) { "#{nginx_server_name}.key" }
@@ -25,8 +26,12 @@ Capistrano::Configuration.instance.load do
     desc "Setup nginx configuration for this application"
     task :setup, roles: :web do
       template("nginx_conf.erb", "/tmp/#{application}")
-      run "#{sudo} mv /tmp/#{application} /etc/nginx/sites-available/#{application}"
-      run "#{sudo} ln -fs /etc/nginx/sites-available/#{application} /etc/nginx/sites-enabled/#{application}"
+      if nginx_config_path == "/etc/nginx/sites-available/"
+        run "#{sudo} mv /tmp/#{application} /etc/nginx/sites-available/#{application}"
+        run "#{sudo} ln -fs /etc/nginx/sites-available/#{application} /etc/nginx/sites-enabled/#{application}"
+      else
+        run "#{sudo} mv /tmp/#{application} #{nginx_config_path}#{application}.conf"
+      end
 
       if nginx_use_ssl
         if nginx_upload_local_certificate
